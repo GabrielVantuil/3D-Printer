@@ -1,0 +1,124 @@
+<html>
+    <head>
+    </head>
+    <style>
+    * {
+        box-sizing: border-box;
+    }
+    
+    /* Create two equal columns that floats next to each other */
+    .column {
+        float: left;
+        width: 50%;
+        padding: 10px;
+        min-height: 100%; /* Should be removed. Only for demonstration */
+    }
+    
+    /* Clear floats after the columns */
+    .row:after {
+        content: "";
+        display: table;
+        clear: both;
+    }
+    </style>
+    <body style="background-color:#aaa;">
+        <div class="column">
+            <input type='file' accept='.gcode' onchange='openFile(event)' id= "file"><br>
+            <button onclick='converter()'>Convert</button><br><br>
+            
+            <button onclick="download()">
+                Create file
+            </button>
+
+
+            <table>
+                <tr>
+                    <td>Z offset:</td> 
+                    <td><input type='number' id="z_offset" max="10" value=0><td>
+                </tr>
+                <tr>
+                    <td>Delay after layer:</td> 
+                    <td><input type='number' id="delay" max="10" value=0><td>
+                </tr>
+                <tr>
+                    <td>Laser status</td> 
+                    <td><input type='radio' value="on" name="laser_sel" onchange="laser_sel()" checked>Always on
+                        <input type='radio' value="off" name="laser_sel" onchange="laser_sel()">Command<td>
+                </tr>
+                <tr>
+                    <td>Laser gcode</td> 
+                    <td><input type='text' id="L_gcode" value=""><td>
+                </tr>
+            </table>
+        </div>
+        <div class="column" style="background-color:#bbb;">
+            <h2>Gcode output</h2>
+            <div id='output'>
+                    ;Layer count: 120<br>
+                    ;LAYER:0<br>
+                    M107<br>
+                    G0 F9000 X108.000 Y71.847 Z0.200<br>
+                    ;TYPE:SKIRT<br>
+                    G1 F1800 X106.638 Y74.390 E0.09595<br>
+                    G1 X106.566 Y74.585 E0.10286
+            </div>
+        </div>
+    <script>
+        var laserCMD = "LASER";
+        var openFile = function(event) {
+            var input = event.target;
+
+            var reader = new FileReader();
+            reader.onload = function(){
+            var text = reader.result;
+            var node = document.getElementById('output');
+            node.innerText = text;
+            console.log(reader.result.substring(0, 200));
+            };
+            reader.readAsText(input.files[0]);
+        };
+
+        function converter(){
+            var text = document.getElementById('output').innerHTML;
+            
+            var n = text.search("\n");
+            //remove 3d printer gcodes
+            text = text.replace(/(E)(\d+.\d+)/g,"");
+            text = text.replace(/(M104 S)(\d+.\d+)/g,"");
+            text = text.replace(/(M109 S)(\d+.\d+)/g,"");
+            text = text.replace(/(M140 S)(\d+.\d+)/g,"");
+            text = text.replace(/(G29)/g,"");
+            text = text.replace(/(E)(\d+)/g,"");
+            //z_offset
+            var z_offset = document.getElementById('z_offset').value;
+            var delay = document.getElementById('delay').value;
+            var L_gcode = document.getElementById('L_gcode').value;
+            text = text.replace(/((Z)(\d+.\d+)|(Z)(\d+))/g,function z(x){
+                x = "Z" + (Number(z_offset) + Number(x.substr(1))) 
+                + "<br>G4 P" + delay + "<br>"
+                + L_gcode;
+                return x;});
+            
+            
+            
+            document.getElementById('output').innerHTML = text;
+        };
+        
+        function download() {
+                var text = document.getElementById('output').innerText;
+                var name = document.getElementById('file').value;
+                name = name.replace(/(C:\\fakepath\\)/gi,"");
+                var type = "text/plain";
+                var a = document.createElement("a");
+                var file = new Blob([text], {type: type});
+                a.href = URL.createObjectURL(file);
+                a.download = name;
+                a.click();
+            }
+
+        function laser_sel(){
+
+        }
+    </script>
+    </body>
+    </html>
